@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Neon: use a pooled connection for the app and (optionally) a direct
+  // connection for migrations. Uncomment directUrl below if you want to
+  // use Neon's pooled connection string in DATABASE_URL while running
+  // migrations through the unpooled one.
+  // directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique
+  password      String
+  name          String
+  role          String         @default("USER") // ADMIN or USER
+  assignments   Assignment[]
+  notifications Notification[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model Company {
+  id        Int       @id @default(autoincrement())
+  name      String
+  industry  String?
+  address   String?
+  contacts  Contact[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Contact {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  phone     String?
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Assignment {
+  id             Int      @id @default(autoincrement())
+  userId         Int
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  entityType     String // "COMPANY" or "CONTACT"
+  entityId       Int
+  assignmentRole String // e.g., "Account Owner"
+  createdAt      DateTime @default(now())
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  isRead    Boolean  @default(false)
+  source    String   @default("SYSTEM") // SYSTEM (immediate) or BACKGROUND_JOB (bull worker)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
